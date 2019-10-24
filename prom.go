@@ -36,7 +36,8 @@ type pmapb struct {
 // Prometheus contains the metrics gathered by the instance and its path
 type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
-	reqDur, reqSz, resSz prometheus.Summary
+	reqDur *prometheus.SummaryVec
+	reqSz, resSz prometheus.Summary
 
 	MetricsPath string
 	Namespace   string
@@ -161,13 +162,14 @@ func (p *Prometheus) register() {
 	)
 	prometheus.MustRegister(p.reqCnt)
 
-	p.reqDur = prometheus.NewSummary(
+	p.reqDur = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Namespace: p.Namespace,
 			Subsystem: p.Subsystem,
 			Name:      "request_duration_seconds",
 			Help:      "The HTTP request latencies in seconds.",
 		},
+		[]string{"code", "method", "path"},
 	)
 	prometheus.MustRegister(p.reqDur)
 
@@ -220,7 +222,7 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		resSz := float64(c.Writer.Size())
 
-		p.reqDur.Observe(elapsed)
+		p.reqDur.WithLabelValues(status, c.Request.Method, path).Observe(elapsed)
 		p.reqCnt.WithLabelValues(status, c.Request.Method, path).Inc()
 		p.reqSz.Observe(float64(reqSz))
 		p.resSz.Observe(resSz)
