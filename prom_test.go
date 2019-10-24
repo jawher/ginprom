@@ -23,19 +23,6 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-func TestPrometheus_Use(t *testing.T) {
-	p := New()
-	r := gin.New()
-
-	p.Use(r)
-
-	assert.Equal(t, 1, len(r.Routes()), "only one route should be added")
-	assert.NotNil(t, p.Engine, "the engine should not be empty")
-	assert.Equal(t, r, p.Engine, "used router should be the same")
-	assert.Equal(t, r.Routes()[0].Path, p.MetricsPath, "the path should match the metrics path")
-	unregister(p)
-}
-
 // Set the path (endpoint) where the metrics will be served
 func ExamplePath() {
 	r := gin.New()
@@ -114,22 +101,6 @@ func TestSubsystem(t *testing.T) {
 		assert.Equal(t, p.Subsystem, test, "should match")
 		unregister(p)
 	}
-}
-
-func TestUse(t *testing.T) {
-	r := gin.New()
-	p := New()
-
-	g := gofight.New()
-	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
-		assert.Equal(t, http.StatusNotFound, r.Code)
-	})
-
-	p.Use(r)
-	g.GET(p.MetricsPath).Run(r, func(r gofight.HTTPResponse, rq gofight.HTTPRequest) {
-		assert.Equal(t, http.StatusOK, r.Code)
-	})
-	unregister(p)
 }
 
 func TestInstrument(t *testing.T) {

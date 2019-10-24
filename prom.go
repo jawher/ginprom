@@ -1,4 +1,4 @@
-// Package ginprom is a library to instrument a gin server and expose a 
+// Package ginprom is a library to instrument a gin server and expose a
 // /metrics endpoint for Prometheus to scrape, keeping a low cardinality by
 // preserving the path parameters name in the prometheus label
 package ginprom
@@ -16,10 +16,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var defaultPath = "/metrics"
-var defaultNs = "gin"
-var defaultSys = "gonic"
-var errInvalidToken = errors.New("Invalid or missing token")
+var (
+	defaultPath     = "/metrics"
+	defaultNs       = "gin"
+	defaultSys      = "gonic"
+	errInvalidToken = errors.New("Invalid or missing token")
+)
 
 type pmap struct {
 	sync.RWMutex
@@ -155,7 +157,7 @@ func (p *Prometheus) register() {
 			Name:      "requests_total",
 			Help:      "How many HTTP requests processed, partitioned by status code and HTTP method.",
 		},
-		[]string{"code", "method", "handler", "host", "path"},
+		[]string{"code", "method", "path"},
 	)
 	prometheus.MustRegister(p.reqCnt)
 
@@ -219,7 +221,7 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 		resSz := float64(c.Writer.Size())
 
 		p.reqDur.Observe(elapsed)
-		p.reqCnt.WithLabelValues(status, c.Request.Method, c.HandlerName(), c.Request.Host, path).Inc()
+		p.reqCnt.WithLabelValues(status, c.Request.Method, path).Inc()
 		p.reqSz.Observe(float64(reqSz))
 		p.resSz.Observe(resSz)
 	}
@@ -228,7 +230,6 @@ func (p *Prometheus) Instrument() gin.HandlerFunc {
 // Use is a method that should be used if the engine is set after middleware
 // initialization
 func (p *Prometheus) Use(e *gin.Engine) {
-	e.GET(p.MetricsPath, prometheusHandler(p.Token))
 	p.Engine = e
 }
 
